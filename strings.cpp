@@ -113,7 +113,6 @@ static void utf16_to_utf8(chr8_t** dest, size_t* destlen,
                 *dptr++ = 0x80 | ((ch >> 12) & 0x3F);
                 *dptr++ = 0x80 | ((ch >>  6) & 0x3F);
                 *dptr++ = 0x80 | ((ch      ) & 0x3F);
-                ++sptr;
             } else if (*sptr >= 0x800) {
                 *dptr++ = 0xE0 | ((*sptr >> 12) & 0x0F);
                 *dptr++ = 0x80 | ((*sptr >>  6) & 0x3F);
@@ -166,7 +165,7 @@ static void utf8_to_raw(chr8_t** dest, size_t* destlen,
             } else if ((*sptr & 0xE0) == 0xC0) {
                 int ch  = (*sptr++ & 0x1F) << 6;
                 if (sptr < src + srclen)
-                    ch += (*sptr++ & 0x3f);
+                    ch += (*sptr++ & 0x3F);
                 *dptr++ = (ch <= 0xFF) ? static_cast<chr8_t>(ch) : '?';
             } else {
                 *dptr++ = *sptr++;
@@ -207,26 +206,26 @@ static void utf8_to_utf16(chr16_t** dest, size_t* destlen,
         sptr = src;
         while (sptr < src + srclen) {
             if ((*sptr & 0xF8) == 0xF0) {
-                int ch  = (*sptr++ & 0x1F) << 18;
+                int ch  = (*sptr++ & 0x07) << 18;
                 if (sptr < src + srclen)
-                    ch += (*sptr++ & 0x3f) << 12;
+                    ch += (*sptr++ & 0x3F) << 12;
                 if (sptr < src + srclen)
-                    ch += (*sptr++ & 0x3f) << 6;
+                    ch += (*sptr++ & 0x3F) << 6;
                 if (sptr < src + srclen)
-                    ch += (*sptr++ & 0x3f);
+                    ch += (*sptr++ & 0x3F);
                 *dptr++ = 0xD800 | ((ch >> 10) & 0x3FF);
                 *dptr++ = 0xDC00 | ((ch      ) & 0x3FF);
             } else if ((*sptr & 0xF0) == 0xE0) {
-                int ch  = (*sptr++ & 0x1F) << 12;
+                int ch  = (*sptr++ & 0x0F) << 12;
                 if (sptr < src + srclen)
-                    ch += (*sptr++ & 0x3f) << 6;
+                    ch += (*sptr++ & 0x3F) << 6;
                 if (sptr < src + srclen)
-                    ch += (*sptr++ & 0x3f);
+                    ch += (*sptr++ & 0x3F);
                 *dptr++ = ch;
             } else if ((*sptr & 0xE0) == 0xC0) {
                 int ch  = (*sptr++ & 0x1F) << 6;
                 if (sptr < src + srclen)
-                    ch += (*sptr++ & 0x3f);
+                    ch += (*sptr++ & 0x3F);
                 *dptr++ = ch;
             } else {
                 *dptr++ = *sptr++;
