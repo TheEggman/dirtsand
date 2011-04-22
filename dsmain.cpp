@@ -57,7 +57,7 @@ static char** console_completer(const char* text, int start, int end)
 {
     static const char* completions[] = {
         /* Commands */
-        "clients", "commdebug", "help", "keygen", "quit", "restart",
+        "addacct", "clients", "commdebug", "help", "keygen", "quit", "restart",
         /* Services */
         "auth", "lobby",
     };
@@ -175,12 +175,12 @@ int main(int argc, char* argv[])
 
                 printf("\n--------------------\n");
                 printf("Server keys:\n");
-                printf("Key.Auth.N = %s\n", DS::Base64Encode(nbuffer[0], 64).c_str());
-                printf("Key.Auth.K = %s\n", DS::Base64Encode(kbuffer[0], 64).c_str());
-                printf("Key.Game.N = %s\n", DS::Base64Encode(nbuffer[1], 64).c_str());
-                printf("Key.Game.K = %s\n", DS::Base64Encode(kbuffer[1], 64).c_str());
-                printf("Key.Gate.N = %s\n", DS::Base64Encode(nbuffer[2], 64).c_str());
-                printf("Key.Gate.K = %s\n", DS::Base64Encode(kbuffer[2], 64).c_str());
+                printf("Server.Auth.N = %s\n", DS::Base64Encode(nbuffer[0], 64).c_str());
+                printf("Server.Auth.K = %s\n", DS::Base64Encode(kbuffer[0], 64).c_str());
+                printf("Server.Game.N = %s\n", DS::Base64Encode(nbuffer[1], 64).c_str());
+                printf("Server.Game.K = %s\n", DS::Base64Encode(kbuffer[1], 64).c_str());
+                printf("Server.Gate.N = %s\n", DS::Base64Encode(nbuffer[2], 64).c_str());
+                printf("Server.Gate.K = %s\n", DS::Base64Encode(kbuffer[2], 64).c_str());
 
                 printf("--------------------\n");
                 printf("UruExplorer:\n");
@@ -259,8 +259,13 @@ int main(int argc, char* argv[])
 #else
             fprintf(stderr, "Error: COMM debugging is only enabled in debug builds\n");
 #endif
+        } else if (args[0] == "addacct") {
+            if (args.size() != 3)
+                printf("Usage: addacct [user] [password]\n");
+            DS::AuthServer_AddAcct(args[1], args[2]);
         } else if (args[0] == "help") {
             printf("DirtSand v1.0 Console supported commands:\n"
+                   "    addacct [user] [password]\n"
                    "    clients\n"
                    "    commdebug <on|off>\n"
                    "    help\n"
