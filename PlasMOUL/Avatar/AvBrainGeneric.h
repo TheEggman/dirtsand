@@ -15,72 +15,38 @@
  * along with dirtsand.  If not, see <http://www.gnu.org/licenses/>.          *
  ******************************************************************************/
 
-#ifndef _MOUL_NETMSGSHAREDSTATE_H
-#define _MOUL_NETMSGSHAREDSTATE_H
+#ifndef _MOUL_AVBRAINGENERIC_H
+#define _MOUL_AVBRAINGENERIC_H
 
-#include "NetMsgObject.h"
+#include "ArmatureBrain.h"
+#include "AnimStage.h"
+#include "Messages/Message.h"
 
 namespace MOUL
 {
-    struct GenericType
+    class AvBrainGeneric : public ArmatureBrain
     {
-        enum Type
-        {
-            e_TypeInt, e_TypeFloat, e_TypeBool, e_TypeString, e_TypeByte,
-            e_TypeAny, e_TypeUint, e_TypeDouble, e_TypeNone = 0xFF,
-        };
-
-        union
-        {
-            int32_t  m_int;
-            uint32_t m_uint;
-            float    m_float;
-            double   m_double;
-            bool     m_bool;
-            uint8_t  m_byte;
-        };
-        DS::String   m_string;
-        uint8_t      m_type;
-
-        GenericType() : m_type(e_TypeNone) { }
-
-        void read(DS::Stream* stream);
-        void write(DS::Stream* stream);
-    };
-
-    struct GenericVar
-    {
-        DS::String  m_name;
-        GenericType m_value;
-
-        void read(DS::Stream* stream);
-        void write(DS::Stream* stream);
-    };
-
-    class NetMsgSharedState : public NetMsgObject
-    {
-    public:
-        uint8_t m_lockRequest;
-
-        // Shared state info
-        bool m_serverMayDelete;
-        DS::String m_stateName;
-        std::vector<GenericVar> m_vars;
+        FACTORY_CREATABLE(AvBrainGeneric)
 
         virtual void read(DS::Stream* stream);
         virtual void write(DS::Stream* stream);
 
-    protected:
-        NetMsgSharedState(uint16_t type)
-            : NetMsgObject(type), m_lockRequest(0) { }
-    };
+    public:
+        std::vector<AnimStage*> m_stages;
+        int32_t m_curStage;
+        uint32_t m_type, m_exitFlags;
+        uint8_t m_mode;
+        bool m_forward;
+        Message* m_startMessage;
+        Message* m_endMessage;
+        float m_fadeIn, m_fadeOut;
+        uint8_t m_moveMode, m_bodyUsage;
+        Key m_recipient;
 
-    class NetMsgTestAndSet : public NetMsgSharedState
-    {
-        FACTORY_CREATABLE(NetMsgTestAndSet)
-
     protected:
-        NetMsgTestAndSet(uint16_t type) : NetMsgSharedState(type) { }
+        AvBrainGeneric(uint16_t type)
+            : ArmatureBrain(type), m_startMessage(0), m_endMessage(0) { }
+        ~AvBrainGeneric();
     };
 }
 

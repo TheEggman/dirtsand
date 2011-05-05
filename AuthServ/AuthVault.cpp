@@ -907,7 +907,7 @@ uint32_t v_create_node(const DS::Vault::Node& node)
 
     fieldp = fieldbuf;
     for (size_t i=0; i<parmcount; ++i) {
-        sprintf(fieldp, "$%u,", i+1);
+        sprintf(fieldp, "$%Zu,", i+1);
         fieldp += strlen(fieldp);
     }
     DS_DASSERT(fieldp - fieldbuf < 1024);
@@ -945,7 +945,7 @@ bool v_update_node(const DS::Vault::Node& node)
     #define SET_FIELD(name, value) \
         { \
             parms.set(parmcount++, value); \
-            fieldp += sprintf(fieldp, "\"" #name "\"=$%u,", parmcount); \
+            fieldp += sprintf(fieldp, "\"" #name "\"=$%Zu,", parmcount); \
         }
     int now = time(0);
     SET_FIELD(ModifyTime, now);
@@ -1205,12 +1205,12 @@ bool v_find_nodes(const DS::Vault::Node& nodeTemplate, std::vector<uint32_t>& no
     #define SET_FIELD(name, value) \
         { \
             parms.set(parmcount++, value); \
-            fieldp += sprintf(fieldp, "\"" #name "\"=$%u AND ", parmcount); \
+            fieldp += sprintf(fieldp, "\"" #name "\"=$%Zu AND ", parmcount); \
         }
     #define SET_FIELD_I(name, value) \
         { \
             parms.set(parmcount++, value); \
-            fieldp += sprintf(fieldp, "LOWER(\"" #name "\")=LOWER($%u) AND ", parmcount); \
+            fieldp += sprintf(fieldp, "LOWER(\"" #name "\")=LOWER($%Zu) AND ", parmcount); \
         }
     if (nodeTemplate.has_CreateTime())
         SET_FIELD(CreateTime, nodeTemplate.m_CreateTime);
@@ -1297,5 +1297,28 @@ bool v_find_nodes(const DS::Vault::Node& nodeTemplate, std::vector<uint32_t>& no
     for (size_t i=0; i<nodes.size(); ++i)
         nodes[i] = strtoul(PQgetvalue(result, i, 0), 0, 10);
     PQclear(result);
+    return true;
+}
+
+bool v_send_node(uint32_t nodeId, uint32_t playerId)
+{
+    PostgresStrings<2> parms;
+    parms.set(0, playerId);
+    parms.set(1, DS::Vault::e_InboxFolder);
+    PGresult* result = PQexecParams(s_postgres,
+            "SELECT idx FROM vault.find_folder($1, $2);",
+            2, 0, parms.m_values, 0, 0, 0);
+    if (PQresultStatus(result) != PGRES_TUPLES_OK) {
+        fprintf(stderr, "%s:%d:\n    Postgres SELECT error: %s\n",
+                __FILE__, __LINE__, PQerrorMessage(s_postgres));
+        PQclear(result);
+        return false;
+    }
+    DS_DASSERT(PQntuples(result) == 1);
+    uint32_t inbox = strtoul(PQgetvalue(result, 0, 0), 0, 10);
+    PQclear(result);
+
+    if (!v_ref_node(inbox, nodeId, 0))
+        return false;
     return true;
 }

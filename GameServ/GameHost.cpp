@@ -56,7 +56,7 @@ static inline void check_postgres(GameHost_Private* host)
 void dm_game_shutdown(GameHost_Private* host)
 {
     pthread_mutex_lock(&host->m_clientMutex);
-    std::tr1::unordered_map<uint32_t, GameClient_Private*>::iterator client_iter;
+    std::unordered_map<uint32_t, GameClient_Private*>::iterator client_iter;
     for (client_iter = host->m_clients.begin(); client_iter != host->m_clients.end(); ++client_iter)
         DS::CloseSock(client_iter->second->m_sock);
     pthread_mutex_unlock(&host->m_clientMutex);
@@ -93,7 +93,7 @@ void dm_propagate(GameHost_Private* host, MOUL::NetMessage* msg, uint32_t sender
     DM_WRITEMSG(host, msg);
 
     pthread_mutex_lock(&host->m_clientMutex);
-    std::tr1::unordered_map<uint32_t, GameClient_Private*>::iterator client_iter;
+    std::unordered_map<uint32_t, GameClient_Private*>::iterator client_iter;
     for (client_iter = host->m_clients.begin(); client_iter != host->m_clients.end(); ++client_iter) {
         if (client_iter->second->m_clientInfo.m_PlayerId == sender
             && !(msg->m_contentFlags & MOUL::NetMessage::e_EchoBackToSender))
@@ -118,14 +118,17 @@ void dm_propagate_to(GameHost_Private* host, MOUL::NetMessage* msg,
     pthread_mutex_lock(&host->m_clientMutex);
     std::vector<uint32_t>::const_iterator rcvr_iter;
     for (rcvr_iter = receivers.begin(); rcvr_iter != receivers.end(); ++rcvr_iter) {
-        std::tr1::unordered_map<uint32_t, GameClient_Private*>::iterator client = host->m_clients.find(*rcvr_iter);
-        if (client != host->m_clients.end()) {
-            try {
-                DS::CryptSendBuffer(client->second->m_sock, client->second->m_crypt,
-                                    host->m_buffer.buffer(), host->m_buffer.size());
-            } catch (DS::SockHup) {
-                // This is handled below too, but we don't want to skip the rest
-                // of the client list if one hung up
+        for (hostmap_t::iterator recv_host = s_gameHosts.begin(); recv_host != s_gameHosts.end(); ++recv_host) {
+            std::unordered_map<uint32_t, GameClient_Private*>::iterator client = recv_host->second->m_clients.find(*rcvr_iter);
+            if (client != recv_host->second->m_clients.end()) {
+                try {
+                    DS::CryptSendBuffer(client->second->m_sock, client->second->m_crypt,
+                                        host->m_buffer.buffer(), host->m_buffer.size());
+                } catch (DS::SockHup) {
+                    // This is handled below too, but we don't want to skip the rest
+                    // of the client list if one hung up
+                }
+                break; // Don't bother checking the rest of the hosts, we found the one we're looking for
             }
         }
     }
@@ -344,12 +347,28 @@ void dm_read_sdl(GameHost_Private* host, GameClient_Private* client,
 void dm_test_and_set(GameHost_Private* host, GameClient_Private* client,
                      MOUL::NetMsgTestAndSet* msg)
 {
-    //TODO: Whatever the client is expecting us to do
-
     MOUL::ServerReplyMsg* reply = MOUL::ServerReplyMsg::Create();
     reply->m_receivers.push_back(msg->m_object);
     reply->m_bcastFlags = MOUL::Message::e_LocalPropagate;
-    reply->m_reply = MOUL::ServerReplyMsg::e_Affirm;
+
+    pthread_mutex_lock(&host->m_lockMutex);
+    if (msg->m_lockRequest) {
+        if (host->m_locks.find(msg->m_object) == host->m_locks.end()) {
+            reply->m_reply = MOUL::ServerReplyMsg::e_Affirm;
+            host->m_locks.insert(msg->m_object);
+        } else {
+            reply->m_reply = MOUL::ServerReplyMsg::e_Deny;
+        }
+    } else {
+        uoidset_t::iterator it = host->m_locks.find(msg->m_object);
+        if (it != host->m_locks.end()) {
+            host->m_locks.erase(it);
+            reply->m_reply = MOUL::ServerReplyMsg::e_Affirm;
+        } else {
+            reply->m_reply = MOUL::ServerReplyMsg::e_Deny;
+        }
+    }
+    pthread_mutex_unlock(&host->m_lockMutex);
 
     MOUL::NetMsgGameMessage* netReply = MOUL::NetMsgGameMessage::Create();
     netReply->m_contentFlags = MOUL::NetMessage::e_HasTimeSent
@@ -375,7 +394,7 @@ void dm_send_members(GameHost_Private* host, GameClient_Private* client)
 
     pthread_mutex_lock(&host->m_clientMutex);
     members->m_members.reserve(host->m_clients.size() - 1);
-    std::tr1::unordered_map<uint32_t, GameClient_Private*>::iterator client_iter;
+    std::unordered_map<uint32_t, GameClient_Private*>::iterator client_iter;
     for (client_iter = host->m_clients.begin(); client_iter != host->m_clients.end(); ++client_iter) {
         if (client_iter->second->m_clientInfo.m_PlayerId != client->m_clientInfo.m_PlayerId
             && !client->m_clientKey.isNull()) {

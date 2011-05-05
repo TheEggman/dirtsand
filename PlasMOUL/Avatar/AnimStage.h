@@ -15,72 +15,38 @@
  * along with dirtsand.  If not, see <http://www.gnu.org/licenses/>.          *
  ******************************************************************************/
 
-#ifndef _MOUL_NETMSGSHAREDSTATE_H
-#define _MOUL_NETMSGSHAREDSTATE_H
+#ifndef _MOUL_ANIMSTAGE_H
+#define _MOUL_ANIMSTAGE_H
 
-#include "NetMsgObject.h"
+#include "creatable.h"
 
 namespace MOUL
 {
-    struct GenericType
+    class AnimStage : public Creatable
     {
-        enum Type
-        {
-            e_TypeInt, e_TypeFloat, e_TypeBool, e_TypeString, e_TypeByte,
-            e_TypeAny, e_TypeUint, e_TypeDouble, e_TypeNone = 0xFF,
-        };
-
-        union
-        {
-            int32_t  m_int;
-            uint32_t m_uint;
-            float    m_float;
-            double   m_double;
-            bool     m_bool;
-            uint8_t  m_byte;
-        };
-        DS::String   m_string;
-        uint8_t      m_type;
-
-        GenericType() : m_type(e_TypeNone) { }
-
-        void read(DS::Stream* stream);
-        void write(DS::Stream* stream);
-    };
-
-    struct GenericVar
-    {
-        DS::String  m_name;
-        GenericType m_value;
-
-        void read(DS::Stream* stream);
-        void write(DS::Stream* stream);
-    };
-
-    class NetMsgSharedState : public NetMsgObject
-    {
-    public:
-        uint8_t m_lockRequest;
-
-        // Shared state info
-        bool m_serverMayDelete;
-        DS::String m_stateName;
-        std::vector<GenericVar> m_vars;
+        FACTORY_CREATABLE(AnimStage)
 
         virtual void read(DS::Stream* stream);
         virtual void write(DS::Stream* stream);
 
-    protected:
-        NetMsgSharedState(uint16_t type)
-            : NetMsgObject(type), m_lockRequest(0) { }
-    };
+        void readAux(DS::Stream* stream);
+        void writeAux(DS::Stream* stream);
 
-    class NetMsgTestAndSet : public NetMsgSharedState
-    {
-        FACTORY_CREATABLE(NetMsgTestAndSet)
+    public:
+        DS::String m_animName;
+        uint8_t m_notify;
+        uint32_t m_forwardType, m_backType;
+        uint32_t m_advanceType, m_regressType;
+        uint32_t m_loops;
+        bool m_doAdvance, m_doRegress;
+        uint32_t m_advanceTo, m_regressTo;
+
+        float m_localTime, m_length;
+        int32_t m_curLoop;
+        bool m_attached;
 
     protected:
-        NetMsgTestAndSet(uint16_t type) : NetMsgSharedState(type) { }
+        AnimStage(uint16_t type) : Creatable(type) { }
     };
 }
 

@@ -2,8 +2,9 @@ project(dirtsand)
 cmake_minimum_required(VERSION 2.6)
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-    set(CMAKE_C_FLAGS "-Wall -Wextra -Wno-unused-parameter ${CMAKE_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-unused-parameter ${CMAKE_CXX_FLAGS}")
+    set(WARN_FLAGS "-Wall -Wextra -Wno-unused-parameter")
+    set(CMAKE_C_FLAGS "${WARN_FLAGS} ${CMAKE_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "-std=gnu++0x ${WARN_FLAGS} ${CMAKE_CXX_FLAGS}")
 endif()
 set(CMAKE_C_FLAGS_DEBUG "-DDEBUG ${CMAKE_C_FLAGS_DEBUG}")
 set(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG ${CMAKE_CXX_FLAGS_DEBUG}")
@@ -24,8 +25,10 @@ include_directories("${CMAKE_SOURCE_DIR}"
 
 set(PlasMOUL_SOURCES
     PlasMOUL/Key.cpp
-    PlasMOUL/Avatar/AvTask.cpp
+    PlasMOUL/Avatar/AnimStage.cpp
     PlasMOUL/Avatar/ArmatureBrain.cpp
+    PlasMOUL/Avatar/AvBrainGeneric.cpp
+    PlasMOUL/Avatar/AvTask.cpp
     PlasMOUL/Messages/EventData.cpp
     PlasMOUL/Messages/Message.cpp
     PlasMOUL/Messages/LoadCloneMsg.cpp
@@ -97,3 +100,5 @@ set_target_properties(dirtsand PROPERTIES
 
 install(TARGETS dirtsand
         RUNTIME DESTINATION "bin")
+install(FILES ${CMAKE_SOURCE_DIR}/bin/dsData.sh
+        DESTINATION "bin")
